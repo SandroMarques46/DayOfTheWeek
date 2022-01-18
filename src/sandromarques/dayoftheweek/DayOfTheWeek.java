@@ -44,9 +44,14 @@ public class DayOfTheWeek {
             "3/1",
             "28/2"
     };
+    private final boolean log;
+
+    public DayOfTheWeek(boolean log) {
+        this.log = log;
+    }
 
     public static void main(String[] args) {
-        DayOfTheWeek m = new DayOfTheWeek();
+        DayOfTheWeek m = new DayOfTheWeek(true);
         m.run();
     }
 
@@ -56,45 +61,50 @@ public class DayOfTheWeek {
         while (!input.equals("exit")) {
             //System.out.print("Enter date : ");
             //input = scanner.nextLine();
-            input = "18/01/2022";
+            input = "14/03/2001";
             String[] split = input.split("/");
             try {
                 int day = Integer.parseInt(split[0]);
                 int month = Integer.parseInt(split[1]);
                 int year = Integer.parseInt(split[2]);
-                int century = getCentury(year);
-                int doomsdayWeekdayNum = getNumberFromYear(century);
-                Pair referenceYear = getReferenceYear(year);
-                System.out.println("- Input year " + year + " is on the " + century + " century");
-                System.out.println("- " + century + " (century) doomsday starts on " + getWeekdayFromNumber(doomsdayWeekdayNum) + " (" + doomsdayWeekdayNum + ")");
-                System.out.print("- Closest reference year is " + referenceYear.year);
-                /*
-                if (referenceYear.inc != 0)
-                    System.out.println(" with an increment of " + referenceYear.inc);
-                 */
-                System.out.println(" and starts on " + getWeekdayFromNumber(doomsdayWeekdayNum + referenceYear.inc));
-                String referenceDayMonth = getReferenceDayMonth(day, month);
-                System.out.println("- Closest reference date found : " + referenceDayMonth);
-                //TODO: leap years could be added to yearsDIff
-                int yearsDiff = referenceYear.year - year;
-                int referenceDiff = getDifferenceFromDates(referenceDayMonth, day + "/" + month);
-
-                int leapYears = 0;
-                if (referenceYear.year != year) {
-                    leapYears = Math.abs(referenceYear.year - year) / 4;
-                }
-                //int dayBase = doomsdayWeekdayNum + (day - referenceDiff);
-                int a = (doomsdayWeekdayNum - yearsDiff - 1);
-                //TODO : a and dayBase maybe negative
-                int dayBase = a + (day - referenceDiff);
-
-                System.out.println(input + " is " + getWeekdayFromNumber(dayBase));
+                System.out.println(input + " is " + getWeekdayFromNumber(calculate(day, month, year)));
                 return;
             } catch (Exception e) {
                 System.out.println("Invalid format!");
             }
         }
         System.out.println("Bye bye!");
+    }
+
+    public int calculate(int day, int month, int year) {
+        int century = getCentury(year);
+        int doomsdayWeekdayNum = getNumberFromYear(century);
+        Pair referenceYear = getReferenceYear(year);
+        System.out.println("- Input year " + year + " is on the " + century + " century");
+        System.out.println("- " + century + " (century) doomsday starts on " + getWeekdayFromNumber(doomsdayWeekdayNum) + " (" + doomsdayWeekdayNum + ")");
+        System.out.print("- Closest reference year is " + referenceYear.year);
+        System.out.println(" and starts on " + getWeekdayFromNumber(doomsdayWeekdayNum + referenceYear.inc));
+        String referenceDayMonth = getReferenceDayMonth(day, month);
+        System.out.println("- Closest reference date found : " + referenceDayMonth);
+        //TODO: leap years could be added to yearsDIff
+        int yearsDiff = year - referenceYear.year;
+        int referenceDiff = getDifferenceFromDates(referenceDayMonth, day + "/" + month);
+
+        int leapYears = 0;
+        if (referenceYear.year != year) {
+            leapYears = Math.abs(referenceYear.year - year) / 4;
+        }
+        //Timestamp of yt video = 6:30
+        int a = doomsdayWeekdayNum + yearsDiff + leapYears + referenceYear.inc;
+        //take out the groups of 7 (range is 0 to 7)
+        /*
+        while (a > 6) a -= 7;
+        while (a < 0) a += 7;
+         */
+        boolean isNegative = a < 0;
+        a = Math.abs(a) % 7;
+        if(isNegative) a *= -1;
+        return a;
     }
 
     private int getDifferenceFromDates(String date1, String date2) {
@@ -108,10 +118,10 @@ public class DayOfTheWeek {
             long date2InMs = d2.getTime();
 
             // getting the diff between two dates.
-            long timeDiff = Math.max(date1InMs,date2InMs) - Math.min(date1InMs,date2InMs);
+            long timeDiff = Math.max(date1InMs, date2InMs) - Math.min(date1InMs, date2InMs);
 
             // converting diff into days
-            return (int) (timeDiff / (1000 * 60 * 60* 24));
+            return (int) (timeDiff / (1000 * 60 * 60 * 24));
         } catch (ParseException e) {
             e.printStackTrace();
             return -1;
@@ -235,7 +245,7 @@ public class DayOfTheWeek {
      */
 
     private Weekday getWeekdayFromNumber(int dayNum) {
-        while (dayNum > 7) dayNum -= 7;
+        while (dayNum >= 7) dayNum -= 7;
         switch (dayNum) {
             case 0 -> {
                 return Weekday.SUNDAY;
