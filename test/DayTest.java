@@ -3,7 +3,31 @@ import org.junit.Test;
 import sandromarques.dayoftheweek.DayOfTheWeek;
 
 public class DayTest {
-    DayOfTheWeek main = new DayOfTheWeek();
+    DayOfTheWeek main = new DayOfTheWeek(false);
+
+    /*
+    0 SUNDAY
+    1 MONDAY
+    2 TUESDAY
+    3 WEDNESDAY
+    4 THURSDAY
+    5 FRIDAY
+    6 SATURDAY
+    */
+    @Test
+    public void dayTest() {
+        Assert.assertEquals(2,main.calculate(14,3,2000)); // TUESDAY (2)
+        Assert.assertEquals(3,main.calculate(14,3,2001)); // WEDNESDAY (3)
+        Assert.assertEquals(4,main.calculate(14,3,2002)); // THURSDAY (4)
+        Assert.assertEquals(5,main.calculate(14,3,2003)); // FRIDAY (5)
+        //leap year so instead of saturday (friday + 1) we add 2 days
+        Assert.assertEquals(0,main.calculate(14,3,2004)); // SUNDAY (0)
+        Assert.assertEquals(1,main.calculate(14,3,2005)); // MONDAY (1)
+
+        Assert.assertEquals(2,main.calculate(14,3,1972)); // TUESDAY (2)
+        Assert.assertEquals(5,main.calculate(14,3,2031)); // FRIDAY (5)
+        Assert.assertEquals(0,main.calculate(14,3,1976)); // SUNDAY (0)
+    }
 
     @Test
     public void yearTest() {
