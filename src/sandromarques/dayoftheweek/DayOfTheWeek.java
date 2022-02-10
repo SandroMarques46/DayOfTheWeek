@@ -2,21 +2,16 @@ package sandromarques.dayoftheweek;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.Scanner;
 
 public class DayOfTheWeek {
     public record Pair(int year, int inc) {
     }
 
-    public static class PairDate {
-        public final int day;
-        public final int month;
-
-        public PairDate(int day, int month){
-            this.day = day;
-            this.month = month;
-        }
-
+    public record PairDate(int day, int month) {
         @Override
         public String toString() {
             return day + "/" + month;
@@ -79,12 +74,12 @@ public class DayOfTheWeek {
         Scanner scanner = new Scanner(System.in);
         String input = "";
         while (!input.equalsIgnoreCase("exit")) {
-            System.out.print("Enter date : ");
+            System.out.print("Enter date (" + FULL_DATE_PATTERN + ") : ");
             input = scanner.nextLine();
+
             String[] split = input.split("/");
-            //TODO must also check for valid date (31 of february = FALSE)
             try {
-                if(!isDateValid(input)){
+                if (!isDateValid(input)) {
                     //just to go to catch
                     throw new Exception("Invalid date");
                 }
@@ -99,16 +94,36 @@ public class DayOfTheWeek {
         System.out.println("Bye bye!");
     }
 
-    //TODO: for strings without zeros like 1/1/2020 it doesn't work (.format() returns 01/01/2020)
     public boolean isDateValid(String dateString) {
         try {
+            dateString = addLeadingZeros(dateString);
+            if (dateString == null) return false;
             SimpleDateFormat sdf = new SimpleDateFormat(FULL_DATE_PATTERN);
-            if (sdf.format(sdf.parse(dateString)).equals(dateString)) {
-                return true;
-            }
+            if (sdf.format(sdf.parse(dateString)).equals(dateString)) return true;
         } catch (Exception ignored) {
         }
         return false;
+    }
+
+    public String addLeadingZeros(String dateString) {
+        String[] split = dateString.split("/");
+        if (split.length > 3) return null;
+        if (dateString.length() == 10) return dateString;
+        StringBuilder newDate = new StringBuilder();
+        //day
+        if (split[0].length() == 0 || split[0].length() > 2) return null;
+        else if (split[0].length() == 1) newDate.append("0");
+        newDate.append(split[0]);
+        newDate.append("/");
+        //month
+        if (split[1].length() == 0 || split[1].length() > 2) return null;
+        else if (split[1].length() == 1) newDate.append("0");
+        newDate.append(split[1]);
+        newDate.append("/");
+        //year
+        if (split[2].length() != 4) return null;
+        newDate.append(split[2]);
+        return newDate.toString();
     }
 
     public int calculate(int day, int month, int year) {
@@ -116,22 +131,22 @@ public class DayOfTheWeek {
         int century = getCentury(year);
 
         //get the doomsday of century
-        int doomsdayOfCentury = getNumberFromYear(century);
+        int doomsdayOfCentury = getYearDigit(century);
 
         //get the nearest year and get the difference between year and reference year
         Pair referenceYear = getReferenceYear(year);
         int yearsDiff = year - referenceYear.year();
 
         //get the nearest day/month and get the difference the nearest day/month
-        String referenceDayMonth = getReferenceDayMonth(day, month);
+        String referenceDayMonth = getClosestDoomsday(day, month, isLeapYear(year));
         int diffFromDates = getDifferenceFromDates(day + "/" + month, referenceDayMonth);
 
         //get the number of leap years
         int leapYears = Math.abs(referenceYear.year() - year) / 4;
 
-        int doomsdayOfReferenceYear = leapYears + removeGroupsOf7(doomsdayOfCentury + referenceYear.inc());
+        int doomsdayOfReferenceYear = removeGroupsOf7(doomsdayOfCentury + yearsDiff + leapYears + referenceYear.inc());
         //Timestamp of yt video = 6:30
-        int total = doomsdayOfReferenceYear + yearsDiff + diffFromDates;
+        int total = doomsdayOfReferenceYear + diffFromDates;
         total = removeGroupsOf7(total);
         if (log) {
             System.out.println("- Input year " + year + " is on the " + century + " century");
@@ -142,9 +157,14 @@ public class DayOfTheWeek {
             System.out.println("- Difference between reference date and wanted date : " + diffFromDates);
             System.out.println("- Number of leap years between those dates : " + leapYears);
             System.out.println("- Doomsday on " + year + " is a " + getWeekdayFromNumber(doomsdayOfReferenceYear));
-            System.out.println("DAY IS " + getWeekdayFromNumber(total));
         }
         return total;
+    }
+
+    public boolean isLeapYear(int year) {
+        if (year % 400 == 0) return true;
+        if (year % 100 == 0) return false;
+        return year % 4 == 0;
     }
 
     /**
@@ -183,16 +203,22 @@ public class DayOfTheWeek {
         }
     }
 
-    public String getReferenceDayMonth(int day, int month) {
+    public String getClosestDoomsday(int day, int month, boolean isLeapYear) {
         //return "14/3";
-        int[] diffArr = new int[doomsday.length];
         String date = day + "/" + month;
-        //TODO: also add leap year dates for check ( leapyear_doomsday , non_leapyear_doomsday arrays)
-        for (int i = 0; i < doomsday.length; i++) {
-            if (doomsday[i].day == day && doomsday[i].month == month) {
-                return doomsday[i].toString();
+        LinkedList<PairDate> doomsday = new LinkedList<>(Arrays.asList(this.doomsday));
+        if (isLeapYear) {
+            Collections.addAll(doomsday, leapyear_doomsday);
+        } else {
+            Collections.addAll(doomsday, non_leapyear_doomsday);
+        }
+        int[] diffArr = new int[doomsday.size()];
+        for (int i = 0; i < doomsday.size(); i++) {
+            PairDate pd = doomsday.get(i);
+            if (pd.day == day && pd.month == month) {
+                return pd.toString();
             } else {
-                diffArr[i] = getDifferenceFromDates(date,doomsday[i].toString());
+                diffArr[i] = getDifferenceFromDates(date, pd.toString());
             }
         }
         int min = 367; // or Integer.MAX_VALUE
@@ -206,7 +232,7 @@ public class DayOfTheWeek {
                 idx = i;
             }
         }
-        return doomsday[idx].toString();
+        return doomsday.get(idx).toString();
     }
 
     /*
@@ -225,7 +251,7 @@ public class DayOfTheWeek {
                 return new Pair(currYearVal, 0);
             } else {
                 if (currYearVal > year)
-                    break; //stop searching since the closest year (lowest difference) was already found previously
+                    break; //stop searching since the closest year (the lowest difference) was already found previously
                 else {
                     diffZeroYears = year - currYearVal;
                     valZeroYears = new Pair(currYearVal, 0);
@@ -257,41 +283,13 @@ public class DayOfTheWeek {
     }
 
     /**
-     * From year parameter returns it's century , e.g
+     * From year parameter returns its century , e.g.
      * getCentury(2020) == 2000
      * getCentury(1987) == 1900
      */
     public int getCentury(int year) {
         return year - year % 100;
     }
-
-    /*
-    18th june 1976
-    ALL ZERO YEARS = 0,28,56,84
-    CONSECUTIVE = 0,12,24,36,48,60,72,84,96
-                  0(0),12(1),24(2),36(3),48(4),60(5),72(6),84(7),96(8)
-    1700 = SUNDAY
-    1800 = FRIDAY
-    1900 = WEDNESDAY
-    2000 = TUESDAY
-    (...repeats)
-
-    for example doomsday in 1988 :
-        1900 = wednesday = 3
-        1988-1984 = 4 years diff (since 1984 is a 0 year)
-        leap year = 4 / 4 = 1
-        TOTAL = 3 + 4 + 1 = 8 (take out groups of 7) = 1 = MONDAY
-    for example 18th june 1976 :
-        1900 = wednesday = 3
-        1972 = 6 (check CONSECUTIVE pattern)
-        1976-1972 = 4 years diff
-        leap year = 4 / 4 = 1
-        = 3 + 6 + 4 + 1 = 14 (take out groups of 7) = 0 = SUNDAY (DOOMSDAY)
-        Now that we know the doomsday value , we just need to calculate from the closest doomsday.
-        In this case the closest to 18th june (18/6) is 6/6
-        6/6 (DOOMSDAY) = SUNDAY = 0
-            then 18/6 = 0 + 18-6 = 12 (take out groups of 7) = 5 = FRIDAY
-     */
 
     private Weekday getWeekdayFromNumber(int dayNum) {
         while (dayNum >= 7) dayNum -= 7;
@@ -321,7 +319,7 @@ public class DayOfTheWeek {
         return null;
     }
 
-    private int getNumberFromWeekday(Weekday weekday) {
+    private int getWeekdayDigit(Weekday weekday) {
         switch (weekday) {
             case SUNDAY -> {
                 return 0;
@@ -348,9 +346,9 @@ public class DayOfTheWeek {
         return -1;
     }
 
-    public int getNumberFromYear(int year) {
+    public int getYearDigit(int year) {
         if (year < 1700) return -1;
-        return getNumberFromWeekday(getWeekdayFromYear(year));
+        return getWeekdayDigit(getWeekdayFromYear(year));
     }
 
     /*
@@ -358,11 +356,7 @@ public class DayOfTheWeek {
     1800 = FRIDAY
     1900 = WEDNESDAY
     2000 = TUESDAY
-    (...repeats)
-    2100 = SUNDAY
-    2200 = FRIDAY
-    2300 = WEDNESDAY
-    2400 = TUESDAY
+    (...repeats pattern)
      */
     private Weekday getWeekdayFromYear(int year) {
         do {
