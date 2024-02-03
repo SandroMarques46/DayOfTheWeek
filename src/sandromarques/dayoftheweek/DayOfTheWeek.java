@@ -19,22 +19,24 @@ public class DayOfTheWeek {
     }
 
     private static final String DATE_PATTERN = "dd/MM";
-    private static final String FULL_DATE_PATTERN = "dd/MM/yyyy";
     private final boolean log;
 
     //Dates that share the same date of the week
-        /*
-        "4/4", "6/6", "8/8", "10/10", "12/12"
-        //MORE SPECIAL DAYS :
-        "14/3"  //PI day
-        "9/5",  //"John works from 9/5 at a 7/11 store"
-        "5/9"   // ---
-        "7,11"  // ---
-        "11,7"  // ---
-        "4/7"   //july 4th , United States independence day
-        "31/10" //halloween
-        "26/12"  //day after Christmas, boxing day
-        */
+    /*
+    "4/4", "6/6", "8/8", "10/10", "12/12"
+    //MORE SPECIAL DAYS :
+    "14/3"  //PI day
+    "9/5",  //"John works from 9/5 at a 7/11 store"
+    "5/9"   // ---
+    "7,11"  // ---
+    "11,7"  // ---
+    "4/7"   //july 4th , United States independence day
+    "31/10" //Halloween
+    "26/12"  //day after Christmas, boxing day
+
+    Add finally if it's a non-leap year -> 03/01 and 28/02
+    if it's a leap year -> 04/01 and 29/02
+    */
 
     private final PairDate[] doomsday = {
             new PairDate(14, 3),  //PI day
@@ -74,19 +76,18 @@ public class DayOfTheWeek {
         Scanner scanner = new Scanner(System.in);
         String input = "";
         while (!input.equalsIgnoreCase("exit")) {
-            System.out.print("Enter date (" + FULL_DATE_PATTERN + ") : ");
+            System.out.print("Enter date (" + DateUtils.FULL_DATE_PATTERN + ") : ");
             input = scanner.nextLine();
 
-            String[] split = input.split("/");
             try {
-                if (!isDateValid(input)) {
-                    //just to go to catch
-                    throw new Exception("Invalid date");
+                InputDate date = DateUtils.getDateFromInput(input);
+
+                if (date == null) {
+                    System.out.println("Date is in incorrect format. Please try again!");
+                    continue;
                 }
-                int day = Integer.parseInt(split[0]);
-                int month = Integer.parseInt(split[1]);
-                int year = Integer.parseInt(split[2]);
-                System.out.println(input + " is " + getWeekdayFromNumber(calculate(day, month, year)));
+
+                System.out.println(input + " is " + getWeekdayFromNumber(calculate(date)));
             } catch (Exception e) {
                 System.out.println("Invalid date! Try again or write EXIT to terminate program");
             }
@@ -94,39 +95,11 @@ public class DayOfTheWeek {
         System.out.println("Bye bye!");
     }
 
-    public boolean isDateValid(String dateString) {
-        try {
-            dateString = addLeadingZeros(dateString);
-            if (dateString == null) return false;
-            SimpleDateFormat sdf = new SimpleDateFormat(FULL_DATE_PATTERN);
-            if (sdf.format(sdf.parse(dateString)).equals(dateString)) return true;
-        } catch (Exception ignored) {
-        }
-        return false;
-    }
+    public int calculate(InputDate date) {
+        int day = date.day;
+        int month = date.month;
+        int year = date.year;
 
-    public String addLeadingZeros(String dateString) {
-        String[] split = dateString.split("/");
-        if (split.length > 3) return null;
-        if (dateString.length() == 10) return dateString;
-        StringBuilder newDate = new StringBuilder();
-        //day
-        if (split[0].length() == 0 || split[0].length() > 2) return null;
-        else if (split[0].length() == 1) newDate.append("0");
-        newDate.append(split[0]);
-        newDate.append("/");
-        //month
-        if (split[1].length() == 0 || split[1].length() > 2) return null;
-        else if (split[1].length() == 1) newDate.append("0");
-        newDate.append(split[1]);
-        newDate.append("/");
-        //year
-        if (split[2].length() != 4) return null;
-        newDate.append(split[2]);
-        return newDate.toString();
-    }
-
-    public int calculate(int day, int month, int year) {
         //get century from year
         int century = getCentury(year);
 
